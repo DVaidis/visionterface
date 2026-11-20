@@ -1,0 +1,80 @@
+# Mise à jour automatique du moteur Electron (chaque lundi).
+# Correctif disponible : test de démarrage, nouvelle version, Release, construction Windows + Mac.
+# Nouvelle version MAJEURE : un ticket (Issue) est ouvert ; pour l'appliquer :
+# onglet Actions > Electron update > Run workflow, cocher « allow_major ».
+name: Electron update
+
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      allow_major:
+        description: 'Autoriser le passage à une nouvelle version majeure d''Electron'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.up.outputs.updated }}
+      tag: ${{ steps.up.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Chercher une nouvelle version d'Electron
+        id: up
+        run: node scripts/electron-update.js
+        env:
+          ALLOW_MAJOR: ${{ inputs.allow_major }}
+
+      - name: Signaler une nouvelle version majeure (ticket)
+        if: steps.up.outputs.major_available != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAJOR: ${{ steps.up.outputs.major_available }}
+        run: |
+          title="Electron $MAJOR disponible : mise à jour majeure à valider"
+          if ! gh issue list --state open --search "$title in:title" --json title -q '.[].title' | grep -qF "$title"; then
+            gh issue create --title "$title" --body "Une nouvelle version majeure d'Electron ($MAJOR) est sortie. Les correctifs de la version actuelle continuent d'être appliqués automatiquement. Pour passer à Electron $MAJOR : onglet Actions > Electron update > Run workflow, cocher allow_major."
+          fi
+
+      - name: Test de démarrage de l'application
+        if: steps.up.outputs.updated == 'true'
+        run: |
+          command -v xvfb-run || (sudo apt-get update && sudo apt-get install -y xvfb)
+          npm install --no-audit --no-fund
+          node node_modules/electron/install.js
+          xvfb-run --auto-servernum npx electron . --no-sandbox --smoke-test
+
+      - name: Enregistrer et créer la Release
+        if: steps.up.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.up.outputs.tag }}
+          TARGET: ${{ steps.up.outputs.target }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src/changelog.json
+          git commit -m "Electron $TARGET (mise à jour automatique) - $TAG"
+          git tag "$TAG"
+          git push origin HEAD --tags
+          gh release create "$TAG" --title "Visionterface ${TAG#v}" --notes "Mise à jour automatique du moteur Electron ($TARGET) : correctifs de sécurité. / Automatic Electron engine update ($TARGET): security fixes. Windows : mise à jour proposée dans l'application. Mac : télécharger le .dmg ci-dessous."
+
+  build:
+    needs: check
+    if: needs.check.outputs.updated == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.check.outputs.tag }}
+    secrets: inherit
