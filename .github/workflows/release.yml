@@ -1,0 +1,86 @@
+# Construit automatiquement Visionterface pour Windows et macOS
+# à chaque publication d'une Release sur GitHub, et joint les fichiers à la Release.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Préparer version et dépôt
+        run: node scripts/ci-prepare.js
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+      - name: Installer le moteur Electron
+        run: node node_modules/electron/install.js
+      - name: Construire le paquet Windows
+        run: node scripts/package-win.js
+      - name: Compresser
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          Compress-Archive -Path out/Visionterface -DestinationPath "out/Visionterface-$v-Windows.zip" -Force
+      - name: Joindre à la Release
+        if: github.event_name == 'release' || inputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.event.release.tag_name }}
+          files: out/*.zip
+      - name: Conserver (lancement manuel)
+        if: github.event_name != 'release' && inputs.tag == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: Visionterface-Windows
+          path: out/*.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Préparer version et dépôt
+        run: node scripts/ci-prepare.js
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+      - name: Construire le .dmg (universel Intel + Apple Silicon, non signé)
+        run: npx electron-builder --mac dmg --universal --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Joindre à la Release
+        if: github.event_name == 'release' || inputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.event.release.tag_name }}
+          files: dist/*.dmg
+      - name: Conserver (lancement manuel)
+        if: github.event_name != 'release' && inputs.tag == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: Visionterface-Mac
+          path: dist/*.dmg
