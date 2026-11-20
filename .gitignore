@@ -1,0 +1,11 @@
+node_modules/
+node-v*/
+dist/
+paquet/
+out/
+*.zip
+*.exe
+node_path.txt
+.Rhistory
+Thumbs.db
+desktop.ini
