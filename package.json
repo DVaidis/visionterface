@@ -1,0 +1,58 @@
+{
+  "name": "visionterface",
+  "productName": "Visionterface",
+  "version": "1.0.2",
+  "description": "Client autonome open source non officiel pour Visio (visio.numerique.gouv.fr) / Unofficial open source standalone client for Visio",
+  "main": "src/main.js",
+  "author": "D. C. Vaidis",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable -c.electronDist=node_modules/electron/dist",
+    "dist:mac": "electron-builder --mac dmg --universal --publish never",
+    "package:win": "node scripts/package-win.js"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "fr.vaidis.visionterface",
+    "productName": "Visionterface",
+    "files": [
+      "src/**/*",
+      "LICENSE",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "Visionterface-${version}-portable.exe"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "identity": null,
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Visionterface utilise la caméra pour les réunions Visio. / Camera access is used for Visio meetings.",
+        "NSMicrophoneUsageDescription": "Visionterface utilise le micro pour les réunions Visio. / Microphone access is used for Visio meetings.",
+        "NSAudioCaptureUsageDescription": "Partage du son de l'ordinateur pendant les réunions. / Share computer audio during meetings."
+      }
+    },
+    "dmg": {
+      "artifactName": "Visionterface-${version}-Mac.dmg",
+      "title": "Visionterface ${version}"
+    }
+  },
+  "visionterface": {
+    "githubRepo": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}

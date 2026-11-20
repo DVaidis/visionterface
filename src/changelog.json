@@ -1,0 +1,44 @@
+[
+  {
+    "version": "1.0.2",
+    "date": "2026-11-19",
+    "fr": [
+      "Mise à jour intégrée : bandeau « Mettre à jour et redémarrer » quand une nouvelle version est publiée (Windows) ; lien de téléchargement direct sur Mac.",
+      "Nouvel onglet Aide, avec le journal des modifications (cette page).",
+      "Le moteur Electron est désormais tenu à jour automatiquement (nouvelle version publiée dès qu'un correctif sort)."
+    ],
+    "en": [
+      "Built-in updates: “Update and restart” banner when a new version is published (Windows); direct download link on Mac.",
+      "New Help tab, including this change log.",
+      "The Electron engine is now kept up to date automatically (a new version is published whenever a fix is released)."
+    ]
+  },
+  {
+    "version": "1.0.1",
+    "date": "2026-11-18",
+    "fr": [
+      "Première version publiée sur GitHub : zip Windows et .dmg Mac construits automatiquement.",
+      "Panneau ⟳ Versions (Electron, Chromium, Node.js…) avec état À jour / Obsolète et vérification quotidienne.",
+      "Réunion en cours affichée en grand ; rappel « Rejoindre » dans la barre latérale.",
+      "Moteur Electron 45 ; adaptations macOS (caméra, micro, partage d'écran, menu).",
+      "Fichiers d'installation en anglais : Install.bat, Uninstall.bat, README.txt."
+    ],
+    "en": [
+      "First release published on GitHub: Windows zip and Mac .dmg built automatically.",
+      "⟳ Versions panel (Electron, Chromium, Node.js…) with Up to date / Obsolete status and daily check.",
+      "Current meeting shown in large type; “Join” reminder in the sidebar.",
+      "Electron 45 engine; macOS adaptations (camera, microphone, screen sharing, menu).",
+      "Installation files in English: Install.bat, Uninstall.bat, README.txt."
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-11-13",
+    "fr": [
+      "Première version : fenêtre dédiée à Visio, liens mémorisés et nommables, session conservée, maintien de la connexion, partage d'écran, interface FR / EN."
+    ],
+    "en": [
+      "First version: dedicated Visio window, saved and nameable links, persistent sign-in, connection keep-alive, screen sharing, FR / EN interface."
+    ]
+  }
+]

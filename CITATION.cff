@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "Si vous utilisez ce logiciel, merci de le citer ainsi. / If you use this software, please cite it as below."
+title: "Visionterface: unofficial open source standalone client for Visio"
+version: 1.0.2
+date-released: 2026-11-19
+license: MIT
+type: software
+authors:
+  - family-names: Vaidis
+    given-names: David C.
+    orcid: "https://orcid.org/0000-0002-1954-2219"
+    affiliation: "CLLE (UMR 5263), CNRS & Université Toulouse – Jean Jaurès"
+keywords:
+  - videoconferencing
+  - Electron
+  - Visio
+  - La Suite numérique
