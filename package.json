@@ -1,7 +1,7 @@
 {
   "name": "visionterface",
   "productName": "Visionterface",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Client autonome open source non officiel pour Visio (visio.numerique.gouv.fr) / Unofficial open source standalone client for Visio",
   "main": "src/main.js",
   "author": "D. C. Vaidis",
@@ -13,7 +13,7 @@
     "package:win": "node scripts/package-win.js"
   },
   "devDependencies": {
-    "electron": "^45.2.3",
+    "electron": "^45.4.1",
     "electron-builder": "^26.0.0"
   },
   "build": {
