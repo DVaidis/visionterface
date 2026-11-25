@@ -1,5 +1,11 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-11-25",
+    "fr": ["Nouveau mécanisme de mise à jour : « Mettre à jour et redémarrer » remplace et relance désormais correctement l'application (Windows). À installer une fois à la main avec Install.bat."],
+    "en": ["New update mechanism: “Update and restart” now correctly replaces and restarts the app (Windows). Install once manually with Install.bat."]
+  },  
+  {
     "version": "1.0.3",
     "date": "2026-11-23",
     "fr": [
