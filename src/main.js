@@ -11,16 +11,16 @@ const os = require('os');
 const pkg = require('../package.json');
 // Dépôt GitHub pour la détection des nouvelles versions ("utilisateur/depot"), défini dans package.json
 const UPDATE_REPO = ((pkg.visionterface && pkg.visionterface.githubRepo) || '').trim();
-
+ 
 const HOME = 'https://visio.numerique.gouv.fr/';
 const PARTITION = 'persist:visio';
 // Domaines autorisés dans la fenêtre (Visio + authentification ProConnect / fournisseurs d'identité gouv.)
 const ALLOWED_HOST = /(^|\.)((numerique\.)?gouv\.fr|proconnect\.gouv\.fr|agentconnect\.gouv\.fr)$/i;
-
+ 
 let win = null;
 let psbId = null;          // blocage de la mise en veille pendant une réunion
 let quitting = false;
-
+ 
 // ---------- Stockage local (liens nommés + réglages) ----------
 const dataFile = () => path.join(app.getPath('userData'), 'visio-data.json');
 function loadData() {
@@ -49,7 +49,7 @@ function saveData(d) {
 })();
 let data = loadData();
 data.settings = Object.assign({ keepSessionCookies: true, alwaysOnTop: false }, data.settings || {});
-
+ 
 // ---------- Une seule instance ----------
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 app.on('second-instance', (_e, argv) => {
@@ -59,14 +59,14 @@ app.on('second-instance', (_e, argv) => {
   const url = argv.find(a => /^https?:\/\//i.test(a));
   if (url) win.webContents.send('open-url', url);
 });
-
+ 
 // ---------- Session persistante ----------
 function setupSession() {
   const ses = session.fromPartition(PARTITION);
-
+ 
   // User-Agent sans le marqueur "Electron" (certains sites le refusent)
   ses.setUserAgent(ses.getUserAgent().replace(/\s?Electron\/\S+/, '').replace(/\s?visio-desktop\/\S+/i, ''));
-
+ 
   // Caméra, micro, notifications, plein écran : accordés pour les domaines autorisés
   const okPerms = new Set(['media', 'display-capture', 'notifications', 'fullscreen',
     'clipboard-sanitized-write', 'clipboard-read', 'speaker-selection', 'idle-detection']);
@@ -89,7 +89,7 @@ function setupSession() {
     try { host = new URL(origin).hostname; } catch {}
     return okPerms.has(perm) && ALLOWED_HOST.test(host);
   });
-
+ 
   // Partage d'écran : sélecteur maison (écrans + fenêtres), son système sous Windows
   ses.setDisplayMediaRequestHandler(async (_req, callback) => {
     // macOS : le partage d'écran exige l'autorisation « Enregistrement de l'écran »
@@ -122,7 +122,7 @@ function setupSession() {
   });
   return ses;
 }
-
+ 
 // Les cookies « de session » (sans date d'expiration) sont effacés à la fermeture.
 // Option : on les transforme en cookies persistants (30 j) pour rester connecté.
 async function persistSessionCookies() {
@@ -145,7 +145,7 @@ async function persistSessionCookies() {
   }
   try { await ses.cookies.flushStore(); } catch {}
 }
-
+ 
 // ---------- Versions et vérification automatique ----------
 function cmpVer(a, b) {
   const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
@@ -215,7 +215,7 @@ function scheduleChecks() {
   setTimeout(run, 8000);                       // peu après le démarrage
   setInterval(run, 24 * 3600 * 1000);          // puis une fois par jour
 }
-
+ 
 // ---------- Mise à jour de Visionterface ----------
 // Windows (version installée par Install.bat) : téléchargement du zip de la Release, puis un petit
 // script PowerShell attend la fermeture de l'application, remplace ses fichiers et la relance.
@@ -256,34 +256,52 @@ async function installUpdate() {
     if (win && !win.isDestroyed()) win.webContents.send('update:progress', p);
   });
   const installDir = path.dirname(process.execPath);
-  const ps1 = path.join(dir, 'apply-update.ps1');
-  const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
-  fs.writeFileSync(ps1, [
-    '$ErrorActionPreference = "Continue"',
-    `$zip = ${q(zip)}; $tmp = ${q(path.join(dir, 'x'))}; $dest = ${q(installDir)}`,
-    `try { Wait-Process -Id ${process.pid} -Timeout 60 -ErrorAction SilentlyContinue } catch {}`,
-    'Start-Sleep -Seconds 1',
-    'try {',
-    '  Expand-Archive -Path $zip -DestinationPath $tmp -Force',
-    '  $src = Join-Path $tmp "Visionterface"',
-    '  if (Test-Path (Join-Path $src "Visionterface.exe")) { robocopy $src $dest /MIR /R:3 /W:1 /NJH /NJS /NDL /NFL /NP | Out-Null }',
-    '} catch {}',
-    'Start-Process -FilePath (Join-Path $dest "Visionterface.exe")',
+  const extractDir = path.join(dir, 'x');
+  const logFile = path.join(dir, 'update.log');
+  const exe = path.join(installDir, 'Visionterface.exe');
+  // Script .cmd (pas PowerShell : souvent bloqué sur les postes gérés). Journal : %TEMP%\visionterface-update\update.log
+  const cmdFile = path.join(dir, 'apply-update.cmd');
+  fs.writeFileSync(cmdFile, [
+    '@echo off',
+    'chcp 65001 >nul',
+    `set "LOG=${logFile}"`,
+    'echo [%date% %time%] Debut de la mise a jour > "%LOG%"',
+    'set /a N=0',
+    ':wait',
+    'tasklist /FI "IMAGENAME eq Visionterface.exe" 2>nul | find /I "Visionterface.exe" >nul',
+    'if errorlevel 1 goto closed',
+    'set /a N+=1',
+    'if %N% GEQ 60 goto closed',
+    'timeout /t 1 /nobreak >nul',
+    'goto wait',
+    ':closed',
+    'echo Application fermee apres %N% s >> "%LOG%"',
+    `if exist "${extractDir}" rmdir /s /q "${extractDir}"`,
+    `mkdir "${extractDir}"`,
+    `tar -xf "${zip}" -C "${extractDir}" >> "%LOG%" 2>&1`,
+    `if not exist "${path.join(extractDir, 'Visionterface', 'Visionterface.exe')}" powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath '${zip.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force" >> "%LOG%" 2>&1`,
+    `if not exist "${path.join(extractDir, 'Visionterface', 'Visionterface.exe')}" (echo ERREUR : archive non extraite >> "%LOG%" & goto restart)`,
+    `robocopy "${path.join(extractDir, 'Visionterface')}" "${installDir}" /MIR /R:5 /W:2 /NJH /NJS /NDL /NFL /NP >> "%LOG%" 2>&1`,
+    'echo robocopy code %errorlevel% >> "%LOG%"',
+    ':restart',
+    'echo Redemarrage >> "%LOG%"',
+    `start "" "${exe}"`,
     ''
   ].join('\r\n'), 'utf8');
   await persistSessionCookies();
   const { spawn } = require('child_process');
-  spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps1],
-    { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  // « start » relance le script dans un processus totalement indépendant de l'application
+  spawn('cmd.exe', ['/d', '/c', `start "" /min cmd.exe /d /c "${cmdFile}"`],
+    { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true }).unref();
   quitting = true;
-  setTimeout(() => app.exit(0), 300);
+  setTimeout(() => app.exit(0), 500);
   return { mode: 'restart' };
 }
 function readChangelog() {
   try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'changelog.json'), 'utf8')); }
   catch { return []; }
 }
-
+ 
 // ---------- Fenêtre ----------
 function createWindow() {
   win = new BrowserWindow({
@@ -313,7 +331,7 @@ function createWindow() {
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('file:')) { e.preventDefault(); if (/^https:\/\//i.test(url)) shell.openExternal(url); }
   });
-
+ 
   win.on('close', async (e) => {
     if (quitting) return;
     e.preventDefault();
@@ -331,7 +349,7 @@ function createWindow() {
     app.quit();
   });
 }
-
+ 
 // Sécurise la <webview> : pas de Node, pas de preload étranger
 app.on('web-contents-created', (_e, contents) => {
   contents.on('will-attach-webview', (_ev, webPreferences, params) => {
@@ -355,7 +373,7 @@ app.on('web-contents-created', (_e, contents) => {
     });
   }
 });
-
+ 
 // ---------- IPC ----------
 ipcMain.handle('data:get', () => data);
 ipcMain.handle('versions:local', () => localVersions());
@@ -382,7 +400,7 @@ ipcMain.handle('clipboard:read', () => clipboard.readText());
 ipcMain.handle('open-external', (_e, url) => {
   if (/^https:\/\//i.test(url)) shell.openExternal(url);
 });
-
+ 
 // Test de démarrage automatique (GitHub Actions) : l'interface doit se charger, puis on quitte.
 const SMOKE = process.argv.includes('--smoke-test');
 if (SMOKE) {
@@ -395,7 +413,7 @@ if (SMOKE) {
     });
   });
 }
-
+ 
 app.whenReady().then(() => {
   setupSession();
   createWindow();
@@ -405,3 +423,4 @@ app.whenReady().then(() => {
   if (url) win.webContents.once('did-finish-load', () => win.webContents.send('open-url', url));
 });
 app.on('window-all-closed', () => app.quit());
+ 
